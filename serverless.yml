@@ -67,11 +67,7 @@ functions:
       - http:
           path: gettext
           method: post
-          cors:
-            origin: '*' # <-- Specify allowed origin
-            headers: # <-- Specify allowed headers
-              - Content-Type
-            allowCredentials: false
+          cors: true
   uploadImage:
     handler: bin/uploadImage
     events:

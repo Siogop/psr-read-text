@@ -35,16 +35,22 @@ func handler(ctx context.Context, reqRaw events.APIGatewayProxyRequest) (events.
 	uid := uidGen.String()
 	key := fmt.Sprintf("%s.png", uid)
 
+	var headers map[string]string
+	headers = make(map[string]string)
+
+	headers["Access-Control-Allow-Origin"] = "*"
+	headers["Access-Control-Allow-Credentials"] = "true"
+
 	var reqJSON RequestJSON
 	err := json.Unmarshal([]byte(reqRaw.Body), &reqJSON)
 	if err != nil {
 		fmt.Println("error unmarshalling request")
-		return events.APIGatewayProxyResponse{Body: "error unmarshalling request", StatusCode: 400}, nil
+		return events.APIGatewayProxyResponse{Headers: headers, Body: "error unmarshalling request", StatusCode: 400}, nil
 	}
 
 	base64dec, err := base64.StdEncoding.DecodeString(reqJSON.ImageBase64)
 	if err != nil {
-		return events.APIGatewayProxyResponse{Body: "error decoding image base 64\n", StatusCode: 500}, nil
+		return events.APIGatewayProxyResponse{Headers: headers, Body: "error decoding image base 64\n", StatusCode: 500}, nil
 	}
 
 	_, err = _uploader.Upload(&s3manager.UploadInput{
@@ -55,7 +61,7 @@ func handler(ctx context.Context, reqRaw events.APIGatewayProxyRequest) (events.
 	})
 	if err != nil {
 		fmt.Println("error uploading to s3")
-		return events.APIGatewayProxyResponse{Body: "unable to upload to s3\n", StatusCode: 500}, nil
+		return events.APIGatewayProxyResponse{Headers: headers, Body: "unable to upload to s3\n", StatusCode: 500}, nil
 	}
 
 	textIn := &rekognition.DetectTextInput{
@@ -69,7 +75,7 @@ func handler(ctx context.Context, reqRaw events.APIGatewayProxyRequest) (events.
 
 	textRes, err := _rekognition.DetectText(textIn)
 	if err != nil {
-		return events.APIGatewayProxyResponse{Body: "unable to detect text\n", StatusCode: 500}, nil
+		return events.APIGatewayProxyResponse{Headers: headers, Body: "unable to detect text\n", StatusCode: 500}, nil
 	}
 
 	var textOut bytes.Buffer
@@ -78,7 +84,10 @@ func handler(ctx context.Context, reqRaw events.APIGatewayProxyRequest) (events.
 		textOut.WriteString("\n")
 	}
 
-	return events.APIGatewayProxyResponse{Body: textOut.String(), StatusCode: 200}, nil
+	//resp := events.APIGatewayProxyResponse{Headers: make(map[string]string), Body: textOut.String(), StatusCode: 200}
+	//resp.Headers["Access-Control-Allow-Origin"] = "*"
+	return events.APIGatewayProxyResponse{Headers: headers, Body: textOut.String(), StatusCode: 200}, nil
+	//return resp, nil
 }
 
 func main() {
